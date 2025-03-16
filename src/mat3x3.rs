@@ -1,4 +1,4 @@
-use std::ops::{Add, Index, Mul};
+use core::ops::{Add, Index, Mul};
 
 use crate::Vec3;
 
@@ -269,8 +269,8 @@ impl Mul<f32> for Mat3x3 {
 
     fn mul(self, scalar: f32) -> Mat3x3 {
         let mut data = [0.0; 9];
-        for i in 0..9 {
-            data[i] = self.data[i] * scalar;
+        for (i, item) in data.iter_mut().enumerate() {
+            *item = self.data[i] * scalar;
         }
         Mat3x3 { data }
     }

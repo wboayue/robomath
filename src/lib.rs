@@ -99,6 +99,8 @@
 //! This library is licensed under the MIT License. See the [LICENSE](https://github.com/wboayue/robomath/blob/main/LICENSE)
 //! file for details.
 
+#![cfg_attr(not(test), no_std)]
+
 #[cfg(test)]
 mod tests;
 

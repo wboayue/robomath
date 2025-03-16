@@ -1,4 +1,9 @@
-use std::ops::Mul;
+use core::{
+    fmt::{self, Display},
+    ops::Mul,
+};
+
+use libm::{asinf, atan2f, cosf, sinf, sqrtf};
 
 use crate::{vec3, Mat3x3, Vec3};
 
@@ -96,21 +101,23 @@ impl Quaternion {
     /// # Examples
     /// ```
     /// use robomath::Quaternion;
-    /// use std::f32::consts::PI;
+    /// use libm::{cosf, sinf};
+    ///
+    /// const PI: f32 = 3.1415927;
     ///
     /// let q = Quaternion::from_euler(0.0, 0.0, PI / 2.0); // 90-degree yaw
     ///
-    /// let expected = Quaternion::new((PI / 4.0).cos(), 0.0, 0.0, (PI / 4.0).sin());
+    /// let expected = Quaternion::new(cosf(PI / 4.0), 0.0, 0.0, sinf(PI / 4.0));
     /// ```
     pub fn from_euler(yaw: f32, pitch: f32, roll: f32) -> Self {
         let roll = roll / 2.0;
         let pitch = pitch / 2.0;
         let yaw = yaw / 2.0;
 
-        let q0 = roll.cos() * pitch.cos() * yaw.cos() + roll.sin() * pitch.sin() * yaw.sin();
-        let q1 = -roll.cos() * pitch.sin() * yaw.sin() + pitch.cos() * yaw.cos() * roll.sin();
-        let q2 = roll.cos() * yaw.cos() * pitch.sin() + roll.sin() * pitch.cos() * yaw.sin();
-        let q3 = roll.cos() * pitch.cos() * yaw.sin() - roll.sin() * yaw.cos() * pitch.sin();
+        let q0 = cosf(roll) * cosf(pitch) * cosf(yaw) + sinf(roll) * sinf(pitch) * sinf(yaw);
+        let q1 = -cosf(roll) * sinf(pitch) * sinf(yaw) + cosf(pitch) * cosf(yaw) * sinf(roll);
+        let q2 = cosf(roll) * cosf(yaw) * sinf(pitch) + sinf(roll) * cosf(pitch) * sinf(yaw);
+        let q3 = cosf(roll) * cosf(pitch) * sinf(yaw) - sinf(roll) * cosf(yaw) * sinf(pitch);
 
         Self {
             w: q0,
@@ -159,7 +166,7 @@ impl Quaternion {
         // Find the largest value to determine which component to compute first
         if t0 >= t1 && t0 >= t2 && t0 >= t3 {
             // q0 is largest
-            let q0 = 0.5 * t0.sqrt();
+            let q0 = 0.5 * sqrtf(t0);
             let q1 = (r[7] - r[5]) / (4.0 * q0); // (R32 - R23) / (4 * q0)
             let q2 = (r[2] - r[6]) / (4.0 * q0); // (R13 - R31) / (4 * q0)
             let q3 = (r[3] - r[1]) / (4.0 * q0); // (R21 - R12) / (4 * q0)
@@ -171,7 +178,7 @@ impl Quaternion {
             }
         } else if t1 >= t2 && t1 >= t3 {
             // q1 is largest
-            let q1 = 0.5 * t1.sqrt();
+            let q1 = 0.5 * sqrtf(t1);
             let q0 = (r[7] - r[5]) / (4.0 * q1); // (R32 - R23) / (4 * q1)
             let q2 = (r[1] + r[3]) / (4.0 * q1); // (R12 + R21) / (4 * q1)
             let q3 = (r[2] + r[6]) / (4.0 * q1); // (R13 + R31) / (4 * q1)
@@ -183,7 +190,7 @@ impl Quaternion {
             }
         } else if t2 >= t3 {
             // q2 is largest
-            let q2 = 0.5 * t2.sqrt();
+            let q2 = 0.5 * sqrtf(t2);
             let q0 = (r[2] - r[6]) / (4.0 * q2); // (R13 - R31) / (4 * q2)
             let q1 = (r[1] + r[3]) / (4.0 * q2); // (R12 + R21) / (4 * q2)
             let q3 = (r[5] + r[7]) / (4.0 * q2); // (R23 + R32) / (4 * q2)
@@ -195,7 +202,7 @@ impl Quaternion {
             }
         } else {
             // q3 is largest
-            let q3 = 0.5 * t3.sqrt();
+            let q3 = 0.5 * sqrtf(t3);
             let q0 = (r[3] - r[1]) / (4.0 * q3); // (R21 - R12) / (4 * q3)
             let q1 = (r[2] + r[6]) / (4.0 * q3); // (R13 + R31) / (4 * q3)
             let q2 = (r[5] + r[7]) / (4.0 * q3); // (R23 + R32) / (4 * q3)
@@ -303,7 +310,7 @@ impl Quaternion {
     /// The yaw angle in radians.
     pub fn yaw(&self) -> f32 {
         let yaw_denominator = self.w * self.w + self.x * self.x - self.y * self.y - self.z * self.z;
-        (2.0 * (self.x * self.y + self.w * self.z)).atan2(yaw_denominator)
+        atan2f(2.0 * (self.x * self.y + self.w * self.z), yaw_denominator)
     }
 
     /// Extracts the pitch angle (rotation about Y-axis) from the quaternion.
@@ -313,7 +320,7 @@ impl Quaternion {
     /// # Returns
     /// The pitch angle in radians.
     pub fn pitch(&self) -> f32 {
-        (-2.0 * (self.x * self.z - self.w * self.y)).asin()
+        asinf(-2.0 * (self.x * self.z - self.w * self.y))
     }
 
     /// Extracts the roll angle (rotation about X-axis) from the quaternion.
@@ -325,7 +332,7 @@ impl Quaternion {
     pub fn roll(&self) -> f32 {
         let roll_denominator =
             self.w * self.w - self.x * self.x - self.y * self.y + self.z * self.z;
-        (2.0 * (self.y * self.z + self.w * self.x)).atan2(roll_denominator)
+        atan2f(2.0 * (self.y * self.z + self.w * self.x), roll_denominator)
     }
 
     /// Converts the quaternion to a Gibbs vector (Rodrigues parameters).
@@ -423,7 +430,7 @@ impl Default for Quaternion {
     }
 }
 
-impl ToString for Quaternion {
+impl Display for Quaternion {
     /// Formats the quaternion as a string.
     ///
     /// # Returns
@@ -435,7 +442,7 @@ impl ToString for Quaternion {
     /// let q = Quaternion::new(1.0, 2.0, 3.0, 4.0);
     /// assert_eq!(q.to_string(), "1.000 2.000 3.000 4.000");
     /// ```
-    fn to_string(&self) -> String {
-        format!("{:.3} {:.3} {:.3} {:.3}", self.w, self.x, self.y, self.z)
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:.3} {:.3} {:.3} {:.3}", self.w, self.x, self.y, self.z)
     }
 }

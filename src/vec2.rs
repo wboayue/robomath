@@ -1,4 +1,5 @@
-use std::ops::{Add, Div, Mul, Neg, Sub};
+use core::ops::{Add, Div, Mul, Neg, Sub};
+// use libm::{F32Ext, cosf, sinf, sqrtf, atan2f, asinf};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
 pub struct Vec2<T: Default> {

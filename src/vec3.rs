@@ -1,4 +1,6 @@
-use std::ops::{Add, Div, Mul, Sub};
+use core::ops::{Add, Div, Mul, Sub};
+
+use libm::sqrtf;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vec3<T> {
@@ -135,7 +137,7 @@ impl<T> Vec3<T> {
     where
         T: Into<f32> + Mul<Output = T> + Add<Output = T> + Copy,
     {
-        (self.magnitude_squared().into()).sqrt()
+        sqrtf(self.magnitude_squared().into())
     }
 }
 
