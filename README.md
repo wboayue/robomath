@@ -1,4 +1,4 @@
-[![Build](https://github.com/wboayue/robomath/workflows/ci/badge.svg)](https://github.com/wboayue/robomath/actions/workflows/ci.yml)
+[![Build](https://github.com/wboayue/robomath/workflows/test/badge.svg)](https://github.com/wboayue/robomath/actions/workflows/test.yml)
 [![License:MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![crates.io](https://img.shields.io/crates/v/robomath.svg)](https://crates.io/crates/robomath)
 [![Documentation](https://img.shields.io/badge/Documentation-green.svg)](https://docs.rs/robomath/latest/robomath/)
