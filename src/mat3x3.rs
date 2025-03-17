@@ -486,9 +486,9 @@ impl Mul<Mat3x3> for Mat3x3 {
     /// let m3 = Mat3x3::new([2.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 2.0]);
     /// let m4 = Mat3x3::new([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
     /// let product = m3 * m4;
-    /// assert_eq!(product[[0, 0]], 6.0); // 2*(1+1+1)
-    /// assert_eq!(product[[1, 1]], 6.0); // 2*(1+1+1)
-    /// assert_eq!(product[[2, 2]], 6.0); // 2*(1+1+1)
+    /// assert_eq!(product[[0, 0]], 2.0); 
+    /// assert_eq!(product[[1, 1]], 2.0); 
+    /// assert_eq!(product[[2, 2]], 2.0);
     /// ```
     fn mul(self, rhs: Mat3x3) -> Mat3x3 {
         let mut data = [0.0; 9];

@@ -118,7 +118,7 @@ pub use vec2::*;
 #[doc(inline)]
 pub use vec3::*;
 
-use core::f32::consts::PI;
+pub use core::f32::consts::PI;
 
 /// Converts degrees to radians.
 ///

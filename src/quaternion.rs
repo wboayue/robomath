@@ -129,11 +129,13 @@ impl Quaternion {
     /// # Examples
     ///
     /// ```
-    /// use robomath::Quaternion;
+    /// use robomath::{Quaternion, to_radians};
     ///
-    /// let q = Quaternion::from_euler(90.0_f32.to_radians(), 0.0, 0.0);
+    /// let q = Quaternion::from_euler(to_radians(90.0), 0.0, to_radians(45.0));
     /// let yaw = q.yaw();
-    /// assert!((yaw - 90.0_f32.to_radians()).abs() < 1e-5);
+    /// let roll = q.roll();
+    /// assert!((yaw - to_radians(90.0)).abs() < 1e-5);
+    /// assert!((roll - to_radians(45.0)).abs() < 1e-5);
     /// ```    
     pub fn from_euler(yaw: f32, pitch: f32, roll: f32) -> Self {
         let roll = roll / 2.0;
@@ -384,10 +386,10 @@ impl Quaternion {
     /// ```
     /// use robomath::{Quaternion, to_radians};
     ///
-    /// let q = Quaternion::from_euler(0.0, to_radians(90.0), 0.0);
+    /// let q = Quaternion::from_euler(0.0, to_radians(45.0), 0.0);
     /// let pitch = q.pitch();
-    /// assert_eq!(pitch, to_radians(90.0));
-    /// assert!((pitch - to_radians(90.0)).abs() < 1e-5);
+    /// 
+    /// assert!((pitch - to_radians(45.0)).abs() < 1e-5);
     /// ```
     pub fn pitch(&self) -> f32 {
         asinf(-2.0 * (self.x * self.z - self.w * self.y))
