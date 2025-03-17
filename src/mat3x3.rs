@@ -353,14 +353,6 @@ impl Index<[usize; 2]> for Mat3x3 {
     }
 }
 
-// impl Index<usize> for Mat3x3 {
-//     type Output = [f32];
-
-//     fn index(&self, ndx: usize) -> &Self::Output {
-//         &self.data[ndx..ndx + 3]
-//     }
-// }
-
 impl IndexMut<[usize; 2]> for Mat3x3 {
     /// Provides mutable row-wise indexing into the matrix.
     ///
@@ -387,8 +379,8 @@ impl IndexMut<[usize; 2]> for Mat3x3 {
     /// assert_eq!(m[[0, 0]], 1.0);
     /// assert_eq!(m[[1, 1]], 5.0);
     /// ```
-    fn index_mut(&mut self, row: [usize; 2]) -> &mut f32 {
-        &mut self.data[row[0] * 3 + row[1]]
+    fn index_mut(&mut self, idx: [usize; 2]) -> &mut f32 {
+        &mut self.data[idx[0] * 3 + idx[1]]
     }
 }
 

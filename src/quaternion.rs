@@ -386,6 +386,7 @@ impl Quaternion {
     ///
     /// let q = Quaternion::from_euler(0.0, to_radians(90.0), 0.0);
     /// let pitch = q.pitch();
+    /// assert_eq!(pitch, to_radians(90.0));
     /// assert!((pitch - to_radians(90.0)).abs() < 1e-5);
     /// ```
     pub fn pitch(&self) -> f32 {
