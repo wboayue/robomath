@@ -1,6 +1,13 @@
 [package]
-name = "math"
+name = "robomath"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["std"]
+std = []
+
 [dependencies]
+libm = "0.2"
+
+[dev-dependencies]
