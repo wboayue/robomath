@@ -10,9 +10,9 @@ A lightweight, efficient, and generic mathematics library for 3D applications, w
 
 ## Features
 
-- 🧮 **Generic Vectors**: `Vec2<T>` and `Vec3<T>` supporting various numeric types with operations like addition, subtraction, multiplication, division, dot product, cross product, and clamping.
-- 🔄 **Quaternions**: Full-featured quaternion implementation for 3D rotations, including Euler angle conversion, rotation matrices, Gibbs vectors, and numerically stable methods.
-- 📐 **3x3 Matrices**: Matrix operations for linear algebra and transformations, including transpose, determinant, trace, skew-symmetric matrices, and outer products.
+- 🧮 **Generic Vectors**: `Vec2<T>` and `Vec3<T>` supporting various numeric types with operations like addition, subtraction, multiplication, division, dot product, cross product, clamping, magnitude, and checking for finiteness.
+- 🔄 **Quaternions**: Full-featured quaternion implementation for 3D rotations, including Euler angle conversion (both yaw-pitch-roll and roll-pitch-yaw), rotation matrices, Gibbs vectors, and numerically stable methods.
+- 📐 **3x3 Matrices**: Matrix operations for linear algebra and transformations, including transpose, determinant, trace, skew-symmetric matrices, outer products, scalar multiplication, and addition.
 - 🔀 **Transformations**: Quaternion and matrix-based transformations for 3D rotations, with support for inertial-to-body and body-to-inertial frame conversions.
 - 🧪 **Comprehensive Tests**: Well-tested with high test coverage (see coverage badge).
 
@@ -64,6 +64,7 @@ let clamped = v1.clamp(0.0, 2.0); // [1.0, 2.0, 2.0]
 // 2D vectors work similarly
 let v2d = vec2(3.0, 4.0);
 let v2d_neg = -v2d; // [-3.0, -4.0]
+```
 
 ### Quaternions
 
@@ -100,6 +101,7 @@ let gibbs = q_from_euler.to_gibbs_vector(); // Vec3 representing Rodrigues param
 
 // Access components
 println!("Quaternion: {} {} {} {}", q_custom.w, q_custom.x, q_custom.y, q_custom.z);
+```
 
 ### 3x3 Matrices
 
@@ -162,18 +164,20 @@ let int_vec = vec3(1, 2, 3); // i32
 let uint_vec = vec3(1u32, 2u32, 3u32); // u32
 ```
 
+## Limitations
+
+- Some quaternion methods (e.g., `inverse`) assume unit quaternions. Non-unit quaternions may require normalization first.
+- Performance optimizations like SIMD are not currently implemented, prioritizing simplicity.
+- Floating-point precision may affect operations with very large or small values. For example, `to_gibbs_vector` uses a large value (1e20) when `w=0` to approximate infinity.
+- Euler angle conversions may encounter gimbal lock in certain configurations (e.g., pitch near ±90 degrees).
+- No support for matrix inversion or higher-dimensional matrices (e.g., 4x4 matrices for homogeneous transformations).
+
 ### Numerical Stability
 
-The quaternion implementation includes numerically stable methods for converting between rotation representations, handling edge cases gracefully:
+The quaternion implementation includes numerically stable methods for converting between rotation representations, handling edge cases gracefully. For example:
 
-```rust
-use robomath::{Quaternion, Mat3x3};
-
-// Convert from rotation matrix to quaternion
-// Using a numerically stable algorithm that avoids singularities
-let rotation_matrix = Mat3x3::new([0.0, 0.0, 1.0, 0.0, 1.0, 0.0, -1.0, 0.0, 0.0]);
-let q = Quaternion::from_rotation_matrix(rotation_matrix);
-```
+- `from_rotation_matrix`: Avoids singularities by selecting the largest component (w, x, y, or z) to compute first, preventing division by zero.
+- Euler angle extraction (`yaw`, `pitch`, `roll`): Uses `atan2f` and `asinf` to handle edge cases like gimbal lock, though users should be aware of potential discontinuities.
 
 ## License
 
