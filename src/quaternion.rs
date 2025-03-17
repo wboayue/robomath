@@ -7,29 +7,44 @@ use libm::{asinf, atan2f, cosf, sinf, sqrtf};
 
 use crate::{vec3, Mat3x3, Vec3};
 
-/// A quaternion representing a 3D rotation or orientation.
+/// A quaternion representing a 3D rotation, stored in scalar-first notation (w, x, y, z).
 ///
-/// Quaternions are mathematical objects of the form `w + xi + yj + zk`, where `w, x, y, z` are
-/// real numbers, and `i, j, k` are imaginary units satisfying `i^2 = j^2 = k^2 = ijk = -1`.
-/// In this implementation, quaternions are primarily used to represent 3D rotations, where a unit
-/// quaternion (i.e., `w^2 + x^2 + y^2 + z^2 = 1`) encodes a rotation in 3D space.
+/// `Quaternion` represents a quaternion as `w + xi + yj + zk`, where `w` is the scalar part
+/// and `(x, y, z)` is the vector part. Quaternions are used to represent 3D rotations in a
+/// numerically stable and gimbal-lock-free manner. The quaternion is typically normalized
+/// (magnitude of 1) to represent a valid rotation.
 ///
-/// # Fields
-/// - `w`: The scalar (real) part of the quaternion.
-/// - `x`: The coefficient of the `i` imaginary unit (first vector component).
-/// - `y`: The coefficient of the `j` imaginary unit (second vector component).
-/// - `z`: The coefficient of the `k` imaginary unit (third vector component).
+/// Key features include:
+/// - Creation from components, Euler angles, or rotation matrices.
+/// - Operations like multiplication (Hamilton product), conjugate, and inverse.
+/// - Conversion to Euler angles, Gibbs vectors, and rotation matrices (inertial-to-body and body-to-inertial).
+///
+/// # Conventions
+///
+/// - The quaternion is stored in scalar-first order: `[w, x, y, z]`.
+/// - Euler angles follow the ZYX convention (yaw, pitch, roll) unless specified otherwise (e.g., `to_euler_rpy`).
+/// - Rotation matrices use standard aerospace conventions: `rotation_matrix_i_wrt_b` for inertial-to-body frame,
+///   and `rotation_matrix_b_wrt_i` for body-to-inertial frame.
 ///
 /// # Examples
+///
 /// ```
-/// use robomath::Quaternion;
+/// use robomath::{Quaternion, vec3};
 ///
+/// // Create a quaternion from components
 /// let q = Quaternion::new(1.0, 0.0, 0.0, 0.0); // Identity quaternion
-///
 /// assert_eq!(q.w, 1.0);
 /// assert_eq!(q.x, 0.0);
-/// assert_eq!(q.y, 0.0);
-/// assert_eq!(q.z, 0.0);
+///
+/// // Create from Euler angles (90 degrees around Z-axis)
+/// let q_yaw = Quaternion::from_euler(90.0_f32.to_radians(), 0.0, 0.0);
+/// let yaw = q_yaw.yaw();
+/// assert!((yaw - 90.0_f32.to_radians()).abs() < 1e-5);
+///
+/// // Multiply quaternions
+/// let q1 = Quaternion::from_euler(0.0, 0.0, 90.0_f32.to_radians());
+/// let q2 = Quaternion::from_euler(0.0, 90.0_f32.to_radians(), 0.0);
+/// let q_combined = q1 * q2;
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Quaternion {
@@ -40,33 +55,48 @@ pub struct Quaternion {
 }
 
 impl Quaternion {
-    /// Creates a new quaternion with the given components.
+    /// Creates a new quaternion from its components.
     ///
     /// # Arguments
-    /// * `w` - The scalar part of the quaternion.
-    /// * `x` - The `i` component (first vector part).
-    /// * `y` - The `j` component (second vector part).
-    /// * `z` - The `k` component (third vector part).
+    ///
+    /// * `w` - The scalar component.
+    /// * `x` - The x-component of the vector part.
+    /// * `y` - The y-component of the vector part.
+    /// * `z` - The z-component of the vector part.
     ///
     /// # Returns
-    /// A new `Quaternion` instance with the specified components.
+    ///
+    /// A new `Quaternion` with the specified components.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use robomath::Quaternion;
+    ///
+    /// let q = Quaternion::new(1.0, 0.0, 0.0, 0.0); // Identity quaternion
+    /// assert_eq!(q.w, 1.0);
+    /// assert_eq!(q.x, 0.0);
+    /// assert_eq!(q.y, 0.0);
+    /// assert_eq!(q.z, 0.0);
+    /// ```
     pub fn new(w: f32, x: f32, y: f32, z: f32) -> Self {
         Self { w, x, y, z }
     }
 
-    /// Creates an identity quaternion representing no rotation.
+    /// Creates an identity quaternion (no rotation).
     ///
-    /// The identity quaternion is `(1, 0, 0, 0)`, which corresponds to a zero rotation.
+    /// The identity quaternion has `w = 1` and `x = y = z = 0`, representing no rotation.
     ///
     /// # Returns
-    /// A `Quaternion` representing the identity (no rotation).
+    ///
+    /// A new `Quaternion` representing the identity rotation.
     ///
     /// # Examples
+    ///
     /// ```
     /// use robomath::Quaternion;
     ///
     /// let q = Quaternion::identity();
-    ///
     /// assert_eq!(q.w, 1.0);
     /// assert_eq!(q.x, 0.0);
     /// assert_eq!(q.y, 0.0);
@@ -81,34 +111,30 @@ impl Quaternion {
         }
     }
 
-    /// Creates a quaternion from Euler angles (roll, pitch, yaw) in the ZYX convention.
+    /// Creates a quaternion from Euler angles in ZYX order (yaw, pitch, roll).
     ///
-    /// The Euler angles follow the "usual SLR sequence":
-    /// 1. Rotate about the global Z-axis by `yaw`.
-    /// 2. Rotate about the resulting Y-axis by `pitch`.
-    /// 3. Rotate about the resulting X-axis by `roll`.
-    ///
-    /// The resulting quaternion represents the orientation of a body frame after applying these rotations.
+    /// The angles are applied in the order: yaw (Z), pitch (Y), roll (X).
+    /// All angles must be in radians.
     ///
     /// # Arguments
-    /// * `yaw` - Rotation about the Z-axis (in radians).
-    /// * `pitch` - Rotation about the Y-axis (in radians).
-    /// * `roll` - Rotation about the X-axis (in radians).
+    ///
+    /// * `yaw` - Rotation around the Z-axis (in radians).
+    /// * `pitch` - Rotation around the Y-axis (in radians).
+    /// * `roll` - Rotation around the X-axis (in radians).
     ///
     /// # Returns
-    /// A `Quaternion` representing the combined rotation.
+    ///
+    /// A new `Quaternion` representing the combined rotation.
     ///
     /// # Examples
+    ///
     /// ```
     /// use robomath::Quaternion;
-    /// use libm::{cosf, sinf};
     ///
-    /// const PI: f32 = 3.1415927;
-    ///
-    /// let q = Quaternion::from_euler(0.0, 0.0, PI / 2.0); // 90-degree yaw
-    ///
-    /// let expected = Quaternion::new(cosf(PI / 4.0), 0.0, 0.0, sinf(PI / 4.0));
-    /// ```
+    /// let q = Quaternion::from_euler(90.0_f32.to_radians(), 0.0, 0.0);
+    /// let yaw = q.yaw();
+    /// assert!((yaw - 90.0_f32.to_radians()).abs() < 1e-5);
+    /// ```    
     pub fn from_euler(yaw: f32, pitch: f32, roll: f32) -> Self {
         let roll = roll / 2.0;
         let pitch = pitch / 2.0;
@@ -129,32 +155,28 @@ impl Quaternion {
 
     /// Creates a quaternion from a 3x3 rotation matrix.
     ///
-    /// Converts a rotation matrix (assumed to be orthogonal with determinant 1) into its equivalent quaternion representation.
-    /// This implementation uses a numerically stable algorithm that avoids division by zero by selecting the largest component.
+    /// This method constructs a quaternion from a rotation matrix using a numerically stable
+    /// algorithm that avoids singularities by selecting the largest component first.
+    /// The input matrix must be orthogonal with determinant 1 (a valid rotation matrix).
     ///
     /// # Arguments
-    /// * `rotation_matrix` - A `Mat3x3` representing a rotation (in row-major order).
+    ///
+    /// * `m` - The `Mat3x3` rotation matrix to convert.
     ///
     /// # Returns
-    /// A `Quaternion` representing the same rotation as the input matrix.
+    ///
+    /// A new `Quaternion` representing the same rotation as the matrix.
     ///
     /// # Examples
-    /// ```
-    /// use robomath::{Quaternion, Mat3x3};
-    /// use std::f32::consts::PI;
     ///
-    /// let cos_90 = (PI / 2.0).cos();
-    /// let sin_90 = (PI / 2.0).sin();
-    /// let mat = Mat3x3::new([
-    ///     cos_90, -sin_90, 0.0,
-    ///     sin_90, cos_90,  0.0,
-    ///     0.0,    0.0,     1.0,
-    /// ]);
-    /// let q = Quaternion::from_rotation_matrix(mat);
-    ///
-    /// let expected = Quaternion::new((PI / 4.0).cos(), 0.0, 0.0, (PI / 4.0).sin());
     /// ```
-    pub fn from_rotation_matrix(rotation_matrix: Mat3x3) -> Self {
+    /// use robomath::{Mat3x3, Quaternion};
+    ///
+    /// let m = Mat3x3::identity();
+    /// let q = Quaternion::from_rotation_matrix(&m);
+    /// assert_eq!(q, Quaternion::identity());
+    /// ```    
+    pub fn from_rotation_matrix(rotation_matrix: &Mat3x3) -> Self {
         let r = rotation_matrix.data;
 
         // Compute the four possible denominators
@@ -217,24 +239,25 @@ impl Quaternion {
 
     /// Computes the conjugate of the quaternion.
     ///
-    /// The conjugate of a quaternion \( q = (w, x, y, z) \) is \( q^* = (w, -x, -y, -z) \).
-    /// For unit quaternions, the conjugate is also the inverse.
+    /// The conjugate of a quaternion `w + xi + yj + zk` is `w - xi - yj - zk`.
+    /// For a unit quaternion, the conjugate is also its inverse.
     ///
     /// # Returns
-    /// The conjugate of this quaternion.
+    ///
+    /// A new `Quaternion` representing the conjugate.
     ///
     /// # Examples
+    ///
     /// ```
     /// use robomath::Quaternion;
     ///
     /// let q = Quaternion::new(1.0, 2.0, 3.0, 4.0);
     /// let conj = q.conjugate();
-    ///
     /// assert_eq!(conj.w, 1.0);
     /// assert_eq!(conj.x, -2.0);
     /// assert_eq!(conj.y, -3.0);
     /// assert_eq!(conj.z, -4.0);
-    /// ```
+    /// ```    
     pub fn conjugate(&self) -> Self {
         Self {
             w: self.w,
@@ -246,27 +269,28 @@ impl Quaternion {
 
     /// Computes the inverse of the quaternion, assuming it is a unit quaternion.
     ///
-    /// For a unit quaternion (\( w^2 + x^2 + y^2 + z^2 = 1 \)), the inverse is equal to its conjugate.
-    /// If the quaternion is not a unit quaternion, this method does not compute the correct inverse
-    /// (which would require division by the norm).
+    /// For a unit quaternion (magnitude 1), the inverse is equal to its conjugate.
+    /// This method does not normalize the quaternion or check its magnitude.
     ///
     /// # Returns
-    /// The inverse of this quaternion, assuming it is a unit quaternion.
+    ///
+    /// A new `Quaternion` representing the inverse.
+    ///
+    /// # Panics
+    ///
+    /// This method does not panic, but the result is only valid for unit quaternions.
+    /// For non-unit quaternions, the inverse would require division by the magnitude squared,
+    /// which is not implemented here.
     ///
     /// # Examples
+    ///
     /// ```
     /// use robomath::Quaternion;
-    /// use std::f32::consts::PI;
     ///
-    /// let q = Quaternion::from_euler(0.0, 0.0, PI / 2.0); // Unit quaternion
+    /// let q = Quaternion::new(1.0, 0.0, 0.0, 0.0); // Identity (unit quaternion)
     /// let inv = q.inverse();
-    ///
-    /// let expected = q.conjugate();
-    /// assert_eq!(inv.w, expected.w);
-    /// assert_eq!(inv.x, expected.x);
-    /// assert_eq!(inv.y, expected.y);
-    /// assert_eq!(inv.z, expected.z);
-    /// ```
+    /// assert_eq!(inv, q.conjugate());
+    /// ```    
     pub fn inverse(&self) -> Self {
         Self {
             w: self.w,
@@ -276,13 +300,23 @@ impl Quaternion {
         }
     }
 
-    /// Computes the rotation matrix from inertial frame to body frame.
+    /// Computes the rotation matrix from inertial to body frame.
     ///
-    /// The resulting matrix \( R \) transforms a vector from the body frame to the inertial frame:
-    /// \( v_I = R v_B \). Assumes the quaternion is a unit quaternion.
+    /// This matrix transforms vectors from the inertial frame to the body frame.
     ///
     /// # Returns
-    /// A `Mat3x3` representing the rotation from inertial to body frame.
+    ///
+    /// A `Mat3x3` representing the rotation matrix.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use robomath::{Quaternion, Mat3x3};
+    ///
+    /// let q = Quaternion::identity();
+    /// let m = q.rotation_matrix_i_wrt_b();
+    /// assert_eq!(m, Mat3x3::identity());
+    /// ```
     pub fn rotation_matrix_i_wrt_b(&self) -> Mat3x3 {
         let qvec = vec3(self.x, self.y, self.z);
         let sk_q = Mat3x3::skew_symmetric(qvec); // Build the skew symmetric matrix of the imaginary part of quaternion
@@ -291,57 +325,121 @@ impl Quaternion {
             + sk_q * 2.0 * self.w
     }
 
-    /// Computes the rotation matrix from body frame to inertial frame.
+    /// Computes the rotation matrix from body to inertial frame.
     ///
-    /// The resulting matrix \( R \) transforms a vector from the inertial frame to the body frame:
-    /// \( v_B = R v_I \). This is the transpose of `rotation_matrix_i_wrt_b`.
+    /// This matrix transforms vectors from the body frame to the inertial frame.
+    /// It is the transpose of `rotation_matrix_i_wrt_b`.
     ///
     /// # Returns
-    /// A `Mat3x3` representing the rotation from body to inertial frame.
+    ///
+    /// A `Mat3x3` representing the rotation matrix.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use robomath::{Quaternion, Mat3x3};
+    ///
+    /// let q = Quaternion::identity();
+    /// let m = q.rotation_matrix_b_wrt_i();
+    /// assert_eq!(m, Mat3x3::identity());
+    /// ```    
     pub fn rotation_matrix_b_wrt_i(&self) -> Mat3x3 {
         self.rotation_matrix_i_wrt_b().transpose()
     }
 
-    /// Extracts the yaw angle (rotation about Z-axis) from the quaternion.
+    /// Extracts the yaw (Z-axis rotation) in radians.
     ///
-    /// Assumes the quaternion represents a rotation in the ZYX Euler angle convention.
+    /// Yaw is computed from the quaternion using the ZYX Euler angle convention.
+    /// Returns a value in the range `[-π, π]`.
     ///
     /// # Returns
+    ///
     /// The yaw angle in radians.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use robomath::Quaternion;
+    ///
+    /// let q = Quaternion::from_euler(90.0_f32.to_radians(), 0.0, 0.0);
+    /// let yaw = q.yaw();
+    /// assert!((yaw - 90.0_f32.to_radians()).abs() < 1e-5);
+    /// ```    
     pub fn yaw(&self) -> f32 {
         let yaw_denominator = self.w * self.w + self.x * self.x - self.y * self.y - self.z * self.z;
         atan2f(2.0 * (self.x * self.y + self.w * self.z), yaw_denominator)
     }
 
-    /// Extracts the pitch angle (rotation about Y-axis) from the quaternion.
+    /// Extracts the pitch (Y-axis rotation) in radians.
     ///
-    /// Assumes the quaternion represents a rotation in the ZYX Euler angle convention.
+    /// Pitch is computed from the quaternion using the ZYX Euler angle convention.
+    /// Returns a value in the range `[-π/2, π/2]`.
     ///
     /// # Returns
+    ///
     /// The pitch angle in radians.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use robomath::{Quaternion, to_radians};
+    ///
+    /// let q = Quaternion::from_euler(0.0, to_radians(90.0), 0.0);
+    /// let pitch = q.pitch();
+    /// assert!((pitch - to_radians(90.0)).abs() < 1e-5);
+    /// ```
     pub fn pitch(&self) -> f32 {
         asinf(-2.0 * (self.x * self.z - self.w * self.y))
     }
 
-    /// Extracts the roll angle (rotation about X-axis) from the quaternion.
+    /// Extracts the roll (X-axis rotation) in radians.
     ///
-    /// Assumes the quaternion represents a rotation in the ZYX Euler angle convention.
+    /// Roll is computed from the quaternion using the ZYX Euler angle convention.
+    /// Returns a value in the range `[-π, π]`.
     ///
     /// # Returns
+    ///
     /// The roll angle in radians.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use robomath::Quaternion;
+    ///
+    /// let q = Quaternion::from_euler(0.0, 0.0, 90.0_f32.to_radians());
+    /// let roll = q.roll();
+    /// assert!((roll - 90.0_f32.to_radians()).abs() < 1e-5);
+    /// ```    
     pub fn roll(&self) -> f32 {
         let roll_denominator =
             self.w * self.w - self.x * self.x - self.y * self.y + self.z * self.z;
         atan2f(2.0 * (self.y * self.z + self.w * self.x), roll_denominator)
     }
 
-    /// Converts the quaternion to a Gibbs vector (Rodrigues parameters).
+    /// Converts the quaternion to a Gibbs vector (rotation axis scaled by tangent of half-angle).
     ///
-    /// The Gibbs vector is defined as \( (x/w, y/w, z/w) \) if \( w \neq 0 \). If \( w = 0 \),
-    /// a large scalar is used to approximate infinity.
+    /// The Gibbs vector is `(x/w, y/w, z/w)`. For small rotations, it approximates the rotation axis
+    /// scaled by the rotation angle in radians.
     ///
     /// # Returns
+    ///
     /// A `Vec3<f32>` representing the Gibbs vector.
+    ///
+    /// # Panics
+    ///
+    /// Does not panic, but returns a large value (1e20) for components when `w` is zero to approximate infinity.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use robomath::{Quaternion, vec3};
+    ///
+    /// let q = Quaternion::new(0.7071, 0.7071, 0.0, 0.0); // 90-degree rotation around X
+    /// let gibbs = q.to_gibbs_vector();
+    /// assert!((gibbs.x - 1.0).abs() < 1e-4);
+    /// assert!((gibbs.y - 0.0).abs() < 1e-4);
+    /// assert!((gibbs.z - 0.0).abs() < 1e-4);
+    /// ```    
     pub fn to_gibbs_vector(&self) -> Vec3<f32> {
         if self.w == 0.0 {
             1e20 * vec3(self.x, self.y, self.z)
@@ -350,54 +448,150 @@ impl Quaternion {
         }
     }
 
-    /// Converts the quaternion to Euler angles in yaw-pitch-roll order.
+    /// Converts the quaternion to Euler angles in ZYX order (yaw, pitch, roll).
     ///
     /// # Returns
-    /// A `Vec3<f32>` containing `(yaw, pitch, roll)` in radians.
-    pub fn to_euler(&self) -> Vec3<f32> {
-        vec3(self.yaw(), self.pitch(), self.roll())
-    }
-
-    /// Converts the quaternion to Euler angles in roll-pitch-yaw order.
     ///
-    /// # Returns
-    /// A `Vec3<f32>` containing `(roll, pitch, yaw)` in radians.
-    pub fn to_euler_rpy(&self) -> Vec3<f32> {
-        vec3(self.roll(), self.pitch(), self.yaw())
-    }
-}
-
-/// Implements quaternion multiplication.
-///
-/// Quaternion multiplication follows the standard Hamilton product rules:
-/// - \( w = w_1 w_2 - x_1 x_2 - y_1 y_2 - z_1 z_2 \)
-/// - \( x = w_1 x_2 + x_1 w_2 + y_1 z_2 - z_1 y_2 \)
-/// - \( y = w_1 y_2 + y_1 w_2 + z_1 x_2 - x_1 z_2 \)
-/// - \( z = w_1 z_2 + z_1 w_2 + x_1 y_2 - y_1 x_2 \)
-impl Mul<Quaternion> for Quaternion {
-    type Output = Quaternion;
-
-    /// Multiplies two quaternions.
-    ///
-    /// # Arguments
-    /// * `p` - The right-hand quaternion to multiply with.
-    ///
-    /// # Returns
-    /// A new `Quaternion` representing the product of `self` and `p`.
+    /// A tuple `(yaw, pitch, roll)` in radians, where:
+    /// - `yaw` is the Z-axis rotation (`[-π, π]`).
+    /// - `pitch` is the Y-axis rotation (`[-π/2, π/2]`).
+    /// - `roll` is the X-axis rotation (`[-π, π]`).
     ///
     /// # Examples
+    ///
+    /// ```
+    /// use robomath::{Quaternion, Vec3, to_radians};
+    ///
+    /// let q = Quaternion::from_euler(to_radians(90.0), to_radians(45.0), to_radians(30.0));
+    /// let Vec3{x: roll, y: pitch, z: yaw} = q.to_euler();
+    ///
+    /// assert!((yaw - to_radians(90.0)).abs() < 1e-5);
+    /// assert!((pitch - to_radians(45.0)).abs() < 1e-5);
+    /// assert!((roll - to_radians(30.0)).abs() < 1e-5);
+    /// ```    
+    pub fn to_euler(&self) -> Vec3<f32> {
+        vec3(self.roll(), self.pitch(), self.yaw())
+    }
+
+    /// Checks if all components of the quaternion are finite.
+    ///
+    /// Returns `true` if all components (`w`, `x`, `y`, `z`) are neither infinite nor NaN,
+    /// according to the IEEE 754 floating-point specification.
+    ///
+    /// # Returns
+    ///
+    /// `true` if all components are finite, `false` otherwise.
+    ///
+    /// # Examples
+    ///
     /// ```
     /// use robomath::Quaternion;
     ///
-    /// let q1 = Quaternion::new(0.0, 1.0, 0.0, 0.0); // i
-    /// let q2 = Quaternion::new(0.0, 0.0, 1.0, 0.0); // j
-    /// let result = q1 * q2;
+    /// let q1 = Quaternion::new(1.0, 2.0, 3.0, 4.0);
+    /// assert!(q1.is_finite());
     ///
-    /// assert_eq!(result.w, 0.0);
-    /// assert_eq!(result.x, 0.0);
-    /// assert_eq!(result.y, 0.0);
-    /// assert_eq!(result.z, 1.0); // i * j = k
+    /// let q2 = Quaternion::new(f32::INFINITY, 0.0, 0.0, 0.0);
+    /// assert!(!q2.is_finite());
+    ///
+    /// let q3 = Quaternion::new(0.0, f32::NAN, 0.0, 0.0);
+    /// assert!(!q3.is_finite());
     /// ```
+    pub fn is_finite(&self) -> bool {
+        self.w.is_finite() && self.x.is_finite() && self.y.is_finite() && self.z.is_finite()
+    }
+
+    /// Computes the magnitude (Euclidean norm) of the quaternion.
+    ///
+    /// The magnitude is calculated as `sqrt(w^2 + x^2 + y^2 + z^2)`, representing the length
+    /// of the quaternion as a 4D vector. For a unit quaternion (representing a valid rotation),
+    /// the magnitude is 1.0.
+    ///
+    /// # Returns
+    ///
+    /// The magnitude as an `f32`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use robomath::Quaternion;
+    ///
+    /// let q = Quaternion::new(1.0, 0.0, 0.0, 0.0); // Identity quaternion
+    /// let mag = q.magnitude();
+    /// assert!((mag - 1.0).abs() < 1e-5);
+    ///
+    /// let q2 = Quaternion::new(1.0, 2.0, 3.0, 4.0);
+    /// let mag2 = q2.magnitude();
+    /// assert!((mag2 - 5.477225).abs() < 1e-5); // sqrt(1^2 + 2^2 + 3^2 + 4^2) ≈ 5.477225
+    /// ```    
+    pub fn magnitude(&self) -> f32 {
+        sqrtf(self.w * self.w + self.x * self.x + self.y * self.y + self.z * self.z)
+    }
+
+    /// Normalizes the quaternion to have a magnitude of 1.
+    ///
+    /// The normalized quaternion is computed by dividing each component by the magnitude:
+    /// `(w/m, x/m, y/m, z/m)`, where `m` is the magnitude. A unit quaternion represents a valid
+    /// 3D rotation. If the magnitude is zero (or very close to zero), the identity quaternion
+    /// is returned to avoid division by zero or numerical instability.
+    ///
+    /// # Returns
+    ///
+    /// A new `Quaternion` with magnitude 1, or the identity quaternion if the original magnitude is zero.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use robomath::Quaternion;
+    ///
+    /// let q = Quaternion::new(0.0, 2.0, 0.0, 0.0);
+    /// let norm = q.normalize();
+    /// assert!((norm.x - 1.0).abs() < 1e-5);
+    /// assert!((norm.magnitude() - 1.0).abs() < 1e-5);
+    ///
+    /// let q_zero = Quaternion::new(0.0, 0.0, 0.0, 0.0);
+    /// let norm_zero = q_zero.normalize();
+    /// assert_eq!(norm_zero, Quaternion::identity());
+    /// ```   
+    pub fn normalize(&self) -> Quaternion {
+        let mag = self.magnitude();
+        if mag.abs() < f32::EPSILON {
+            Quaternion::identity() // Handle zero magnitude case
+        } else {
+            Quaternion::new(self.w / mag, self.x / mag, self.y / mag, self.z / mag)
+        }
+    }
+}
+
+impl Mul<Quaternion> for Quaternion {
+    type Output = Quaternion;
+
+    /// Multiplies two quaternions using the Hamilton product.
+    ///
+    /// The Hamilton product combines two quaternions to represent the composition of their rotations.
+    /// For quaternions `q1 = (w1, x1, y1, z1)` and `q2 = (w2, x2, y2, z2)`, the product is:
+    /// - `w = w1*w2 - x1*x2 - y1*y2 - z1*z2`
+    /// - `x = w1*x2 + x1*w2 + y1*z2 - z1*y2`
+    /// - `y = w1*y2 - x1*z2 + y1*w2 + z1*x2`
+    /// - `z = w1*z2 + x1*y2 - y1*x2 + z1*w2`
+    ///
+    /// # Arguments
+    ///
+    /// * `rhs` - The quaternion to multiply with `self`.
+    ///
+    /// # Returns
+    ///
+    /// A new `Quaternion` representing the product.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use robomath::Quaternion;
+    ///
+    /// let q1 = Quaternion::from_euler(0.0, 0.0, 90.0_f32.to_radians());
+    /// let q2 = Quaternion::from_euler(0.0, 90.0_f32.to_radians(), 0.0);
+    /// let q = q1 * q2;
+    /// // q represents a combined rotation
+    /// ```    
     fn mul(self, p: Quaternion) -> Quaternion {
         let q = self;
 

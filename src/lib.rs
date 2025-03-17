@@ -117,3 +117,30 @@ pub use quaternion::*;
 pub use vec2::*;
 #[doc(inline)]
 pub use vec3::*;
+
+use core::f32::consts::PI;
+
+/// Converts degrees to radians.
+///
+/// This function multiplies the input angle (in degrees) by π/180 to convert it to radians.
+/// It uses `libm::PIf` for a precise value of π in a `no_std` environment.
+///
+/// # Arguments
+///
+/// * `degrees` - The angle in degrees.
+///
+/// # Returns
+///
+/// The angle in radians as an `f32`.
+///
+/// # Examples
+///
+/// ```
+/// use robomath::to_radians;
+///
+/// let rad = to_radians(90.0);
+/// assert!((rad - core::f32::consts::PI / 2.0).abs() < 1e-5);
+/// ```
+pub fn to_radians(degrees: f32) -> f32 {
+    degrees * (PI / 180.0)
+}

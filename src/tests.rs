@@ -517,6 +517,24 @@ mod mat3x3 {
         let expected = [2.0, 2.0, 3.0, 4.0, 6.0, 6.0, 7.0, 8.0, 10.0];
         assert_eq!(sum.data, expected);
     }
+
+    #[test]
+    fn test_matrix_multiplication() {
+        let m1 = Mat3x3::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
+        let m2 = Mat3x3::identity();
+        let product = m1 * m2;
+        assert_eq!(product.data, m1.data);
+    }
+
+    #[test]
+    fn test_is_finite() {
+        let m1 = Mat3x3::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
+        assert!(m1.is_finite());
+
+        let mut m2 = Mat3x3::zeros();
+        m2[[0, 0]] = f32::INFINITY;
+        assert!(!m2.is_finite());
+    }
 }
 
 mod quaternion {
@@ -599,7 +617,7 @@ mod quaternion {
     fn test_to_euler() {
         // Test Euler angle extraction for a 90-degree yaw
         let q = Quaternion::from_euler(PI / 2.0, 0.0, 0.0);
-        let euler = q.to_euler_rpy(); // (roll, pitch, yaw)
+        let euler = q.to_euler(); // (roll, pitch, yaw)
         assert_float_eq(euler.x, 0.0, 1e-6); // roll
         assert_float_eq(euler.y, 0.0, 1e-6); // pitch
         assert_float_eq(euler.z, PI / 2.0, 1e-6); // yaw
@@ -635,7 +653,7 @@ mod quaternion {
         let cos_90 = (PI / 2.0).cos();
         let sin_90 = (PI / 2.0).sin();
         let mat = Mat3x3::new([cos_90, -sin_90, 0.0, sin_90, cos_90, 0.0, 0.0, 0.0, 1.0]);
-        let q = Quaternion::from_rotation_matrix(mat);
+        let q = Quaternion::from_rotation_matrix(&mat);
         let expected = Quaternion::new((PI / 4.0).cos(), 0.0, 0.0, (PI / 4.0).sin());
         assert_quaternion_eq(&q, &expected, 1e-6);
     }
@@ -687,13 +705,13 @@ mod quaternion {
     fn test_from_rotation_matrix_edge_cases() {
         // Test with identity matrix
         let mat = Mat3x3::identity();
-        let q = Quaternion::from_rotation_matrix(mat);
+        let q = Quaternion::from_rotation_matrix(&mat);
         assert_quaternion_eq(&q, &Quaternion::identity(), 1e-6);
 
         // Test with rotation matrix where q0 is largest
         // 180-degree rotation about z-axis
         let mat = Mat3x3::new([-1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, 1.0]);
-        let q = Quaternion::from_rotation_matrix(mat);
+        let q = Quaternion::from_rotation_matrix(&mat);
         // Expected quaternion: (0, 0, 0, 1) or (0, 0, 0, -1)
         // But our code chooses the one with positive w
         assert!(
@@ -704,7 +722,7 @@ mod quaternion {
         // Test with rotation matrix where q1 is largest
         // 180-degree rotation about x-axis
         let mat = Mat3x3::new([1.0, 0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0, -1.0]);
-        let q = Quaternion::from_rotation_matrix(mat);
+        let q = Quaternion::from_rotation_matrix(&mat);
         // Expected quaternion: (0, 1, 0, 0) or (0, -1, 0, 0)
         assert!(
             (q.w.abs() < 1e-6 && (q.x - 1.0).abs() < 1e-6)
@@ -714,7 +732,7 @@ mod quaternion {
         // Test with rotation matrix where q2 is largest
         // 180-degree rotation about y-axis
         let mat = Mat3x3::new([-1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, -1.0]);
-        let q = Quaternion::from_rotation_matrix(mat);
+        let q = Quaternion::from_rotation_matrix(&mat);
         // Expected quaternion: (0, 0, 1, 0) or (0, 0, -1, 0)
         assert!(
             (q.w.abs() < 1e-6 && (q.y - 1.0).abs() < 1e-6)
@@ -749,14 +767,28 @@ mod quaternion {
         let q = Quaternion::from_euler(yaw, pitch, roll);
         let euler = q.to_euler();
 
-        assert_float_eq(euler.x, yaw, 1e-5); // yaw
+        assert_float_eq(euler.z, yaw, 1e-5); // yaw
         assert_float_eq(euler.y, pitch, 1e-5); // pitch
-        assert_float_eq(euler.z, roll, 1e-5); // roll
+        assert_float_eq(euler.x, roll, 1e-5); // roll
+    }
 
-        // Also test the reverse order (rpy)
-        let rpy = q.to_euler_rpy();
-        assert_float_eq(rpy.x, roll, 1e-5); // roll
-        assert_float_eq(rpy.y, pitch, 1e-5); // pitch
-        assert_float_eq(rpy.z, yaw, 1e-5); // yaw
+    #[test]
+    fn test_magnitude() {
+        let q = Quaternion::new(1.0, 0.0, 0.0, 0.0);
+        assert!((q.magnitude() - 1.0).abs() < 1e-5);
+
+        let q2 = Quaternion::new(1.0, 2.0, 3.0, 4.0);
+        assert!((q2.magnitude() - 5.477225).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_normalize() {
+        let q = Quaternion::new(0.0, 2.0, 0.0, 0.0);
+        let norm = q.normalize();
+        assert!((norm.magnitude() - 1.0).abs() < 1e-5);
+        assert!((norm.x - 1.0).abs() < 1e-5);
+
+        let q_zero = Quaternion::new(0.0, 0.0, 0.0, 0.0);
+        assert_eq!(q_zero.normalize(), Quaternion::identity());
     }
 }

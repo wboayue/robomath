@@ -23,7 +23,7 @@ use crate::Vec3;
 /// let m = Mat3x3::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
 ///
 /// // Access elements
-/// assert_eq!(m[1][1], 5.0); // Element at row 1, column 1
+/// assert_eq!(m[[1, 1]], 5.0); // Element at row 1, column 1
 ///
 /// // Compute determinant
 /// let det = m.determinant();
@@ -31,8 +31,8 @@ use crate::Vec3;
 ///
 /// // Create an identity matrix
 /// let id = Mat3x3::identity();
-/// assert_eq!(id[0][0], 1.0);
-/// assert_eq!(id[0][1], 0.0);
+/// assert_eq!(id[[0, 0]], 1.0);
+/// assert_eq!(id[[0, 1]], 0.0);
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Mat3x3 {
@@ -62,9 +62,9 @@ impl Mat3x3 {
     /// use robomath::Mat3x3;
     ///
     /// let m = Mat3x3::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
-    /// assert_eq!(m[0][0], 1.0);
-    /// assert_eq!(m[1][1], 5.0);
-    /// assert_eq!(m[2][2], 9.0);
+    /// assert_eq!(m[[0, 0]], 1.0);
+    /// assert_eq!(m[[1, 1]], 5.0);
+    /// assert_eq!(m[[2, 2]], 9.0);
     /// ```    
     pub fn new(data: [f32; 9]) -> Self {
         Self { data }
@@ -107,10 +107,10 @@ impl Mat3x3 {
     /// use robomath::Mat3x3;
     ///
     /// let m = Mat3x3::identity();
-    /// assert_eq!(m[0][0], 1.0);
-    /// assert_eq!(m[0][1], 0.0);
-    /// assert_eq!(m[1][1], 1.0);
-    /// assert_eq!(m[2][2], 1.0);
+    /// assert_eq!(m[[0, 0]], 1.0);
+    /// assert_eq!(m[[0, 1]], 0.0);
+    /// assert_eq!(m[[1, 1]], 1.0);
+    /// assert_eq!(m[[2, 2]], 1.0);
     /// ```
     pub fn identity() -> Self {
         Self {
@@ -143,12 +143,12 @@ impl Mat3x3 {
     ///
     /// let v = vec3(1.0, 2.0, 3.0);
     /// let m = Mat3x3::skew_symmetric(v);
-    /// assert_eq!(m[0][0], 0.0);
-    /// assert_eq!(m[0][1], -3.0);
-    /// assert_eq!(m[0][2], 2.0);
-    /// assert_eq!(m[1][0], 3.0);
-    /// assert_eq!(m[1][1], 0.0);
-    /// assert_eq!(m[2][2], 0.0);
+    /// assert_eq!(m[[0, 0]], 0.0);
+    /// assert_eq!(m[[0, 1]], -3.0);
+    /// assert_eq!(m[[0, 2]], 2.0);
+    /// assert_eq!(m[[1, 0]], 3.0);
+    /// assert_eq!(m[[1, 1]], 0.0);
+    /// assert_eq!(m[[2, 2]], 0.0);
     /// ```    
     pub fn skew_symmetric(q: Vec3<f32>) -> Mat3x3 {
         Self {
@@ -178,10 +178,10 @@ impl Mat3x3 {
     /// let u = vec3(1.0, 2.0, 3.0);
     /// let v = vec3(4.0, 5.0, 6.0);
     /// let m = Mat3x3::outer_product(u, v);
-    /// assert_eq!(m[0][0], 4.0); // 1*4
-    /// assert_eq!(m[0][1], 5.0); // 1*5
-    /// assert_eq!(m[1][2], 12.0); // 2*6
-    /// assert_eq!(m[2][2], 18.0); // 3*6
+    /// assert_eq!(m[[0, 0]], 4.0); // 1*4
+    /// assert_eq!(m[[0, 1]], 5.0); // 1*5
+    /// assert_eq!(m[[1, 2]], 12.0); // 2*6
+    /// assert_eq!(m[[2, 2]], 18.0); // 3*6
     /// ```
     pub fn outer_product(a: Vec3<f32>, b: Vec3<f32>) -> Mat3x3 {
         let mut data = [0.0; 9];
@@ -216,10 +216,10 @@ impl Mat3x3 {
     ///
     /// let m = Mat3x3::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
     /// let mt = m.transpose();
-    /// assert_eq!(mt[0][0], 1.0);
-    /// assert_eq!(mt[0][1], 4.0);
-    /// assert_eq!(mt[1][0], 2.0);
-    /// assert_eq!(mt[2][2], 9.0);
+    /// assert_eq!(mt[[0, 0]], 1.0);
+    /// assert_eq!(mt[[0, 1]], 4.0);
+    /// assert_eq!(mt[[1, 0]], 2.0);
+    /// assert_eq!(mt[[2, 2]], 9.0);
     /// ```
     pub fn transpose(&self) -> Self {
         Self {
@@ -310,11 +310,11 @@ impl Mat3x3 {
     /// assert!(m1.is_finite());
     ///
     /// let mut m2 = Mat3x3::zeros();
-    /// m2[0][0] = f32::INFINITY;
+    /// m2[[0, 0]] = f32::INFINITY;
     /// assert!(!m2.is_finite());
     ///
     /// let mut m3 = Mat3x3::zeros();
-    /// m3[1][1] = f32::NAN;
+    /// m3[[1, 1]] = f32::NAN;
     /// assert!(!m3.is_finite());
     /// ```
     pub fn is_finite(&self) -> bool {
@@ -345,13 +345,21 @@ impl Index<[usize; 2]> for Mat3x3 {
     /// use robomath::Mat3x3;
     ///
     /// let m = Mat3x3::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
-    /// assert_eq!(m[0][0], 1.0);
-    /// assert_eq!(m[1][1], 5.0);
+    /// assert_eq!(m[[0, 0]], 1.0);
+    /// assert_eq!(m[[1, 1]], 5.0);
     /// ```    
     fn index(&self, ndx: [usize; 2]) -> &Self::Output {
         &self.data[ndx[0] * 3 + ndx[1]]
     }
 }
+
+// impl Index<usize> for Mat3x3 {
+//     type Output = [f32];
+
+//     fn index(&self, ndx: usize) -> &Self::Output {
+//         &self.data[ndx..ndx + 3]
+//     }
+// }
 
 impl IndexMut<[usize; 2]> for Mat3x3 {
     /// Provides mutable row-wise indexing into the matrix.
@@ -374,10 +382,10 @@ impl IndexMut<[usize; 2]> for Mat3x3 {
     /// use robomath::Mat3x3;
     ///
     /// let mut m = Mat3x3::zeros();
-    /// m[0][0] = 1.0;
-    /// m[1][1] = 5.0;
-    /// assert_eq!(m[0][0], 1.0);
-    /// assert_eq!(m[1][1], 5.0);
+    /// m[[0, 0]] = 1.0;
+    /// m[[1, 1]] = 5.0;
+    /// assert_eq!(m[[0, 0]], 1.0);
+    /// assert_eq!(m[[1, 1]], 5.0);
     /// ```
     fn index_mut(&mut self, row: [usize; 2]) -> &mut f32 {
         &mut self.data[row[0] * 3 + row[1]]
@@ -406,9 +414,9 @@ impl Mul<f32> for Mat3x3 {
     ///
     /// let m = Mat3x3::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
     /// let scaled = m * 2.0;
-    /// assert_eq!(scaled[0][0], 2.0);
-    /// assert_eq!(scaled[1][1], 10.0);
-    /// assert_eq!(scaled[2][2], 18.0);
+    /// assert_eq!(scaled[[0, 0]], 2.0);
+    /// assert_eq!(scaled[[1, 1]], 10.0);
+    /// assert_eq!(scaled[[2, 2]], 18.0);
     /// ```    
     fn mul(self, scalar: f32) -> Mat3x3 {
         let mut data = [0.0; 9];
@@ -440,9 +448,9 @@ impl Add<Mat3x3> for Mat3x3 {
     /// let m1 = Mat3x3::new([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]);
     /// let m2 = Mat3x3::identity();
     /// let sum = m1 + m2;
-    /// assert_eq!(sum[0][0], 2.0); // 1 + 1
-    /// assert_eq!(sum[0][1], 2.0); // 2 + 0
-    /// assert_eq!(sum[1][1], 6.0); // 5 + 1
+    /// assert_eq!(sum[[0, 0]], 2.0); // 1 + 1
+    /// assert_eq!(sum[[0, 1]], 2.0); // 2 + 0
+    /// assert_eq!(sum[[1, 1]], 6.0); // 5 + 1
     /// ```    
     fn add(self, rhs: Mat3x3) -> Mat3x3 {
         let mut data = [0.0; 9];
@@ -486,9 +494,9 @@ impl Mul<Mat3x3> for Mat3x3 {
     /// let m3 = Mat3x3::new([2.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 2.0]);
     /// let m4 = Mat3x3::new([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
     /// let product = m3 * m4;
-    /// assert_eq!(product[0][0], 6.0); // 2*(1+1+1)
-    /// assert_eq!(product[1][1], 6.0); // 2*(1+1+1)
-    /// assert_eq!(product[2][2], 6.0); // 2*(1+1+1)
+    /// assert_eq!(product[[0, 0]], 6.0); // 2*(1+1+1)
+    /// assert_eq!(product[[1, 1]], 6.0); // 2*(1+1+1)
+    /// assert_eq!(product[[2, 2]], 6.0); // 2*(1+1+1)
     /// ```
     fn mul(self, rhs: Mat3x3) -> Mat3x3 {
         let mut data = [0.0; 9];
