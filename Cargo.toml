@@ -2,6 +2,18 @@
 name = "robomath"
 version = "0.1.0"
 edition = "2021"
+authors = ["Wil Boayue <wil@wsbsolutions.com>"]
+readme = "README.md"
+description = "A lightweight, efficient, and generic mathematics library for 3D applications, with a focus on robotics and simulation."
+homepage = "https://github.com/wboayue/robomath/"
+repository = "https://github.com/wboayue/robomath/"
+documentation = "https://docs.rs/robomath/latest/robomath/index.html"
+license = "MIT"
+keywords = ["math", "robotics", "simulation"]
+categories = ["aerospace::simulation", "mathematics ", "game-development"]
+exclude = [
+    "justfile",
+]
 
 [features]
 default = ["std"]
