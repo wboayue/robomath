@@ -10,7 +10,7 @@ repository = "https://github.com/wboayue/robomath/"
 documentation = "https://docs.rs/robomath/latest/robomath/index.html"
 license = "MIT"
 keywords = ["math", "robotics", "simulation"]
-categories = ["aerospace::simulation", "mathematics ", "game-development"]
+categories = ["aerospace::simulation", "mathematics", "game-development"]
 exclude = [
     "justfile",
 ]
