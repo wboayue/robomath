@@ -2,7 +2,7 @@
 [![License:MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![crates.io](https://img.shields.io/crates/v/robomath.svg)](https://crates.io/crates/robomath)
 [![Documentation](https://img.shields.io/badge/Documentation-green.svg)](https://docs.rs/robomath/latest/robomath/)
-[![Coverage Status](https://coveralls.io/repos/github/wboayue/robomath/badge.svg?branch=main)](https://coveralls.io/github/wboayue/robomath?branch=main)
+[![Coverage Status](https://coveralls.io/repos/github/wboayue/robomath/badge.svg?branch=main)](https://coveralls.io/github/wboayue/robomath?branch=main&cb=1)
 
 # Robomath
 
