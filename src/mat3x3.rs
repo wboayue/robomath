@@ -2,6 +2,9 @@ use core::ops::{Add, Index, IndexMut, Mul};
 
 use crate::Vec3;
 
+#[cfg(test)]
+mod tests;
+
 /// A 3x3 matrix stored in row-major order, suitable for linear algebra and transformations in 3D space.
 ///
 /// `Mat3x3` represents a 3x3 matrix using a single `[f32; 9]` array in row-major order.
@@ -486,8 +489,8 @@ impl Mul<Mat3x3> for Mat3x3 {
     /// let m3 = Mat3x3::new([2.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 2.0]);
     /// let m4 = Mat3x3::new([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
     /// let product = m3 * m4;
-    /// assert_eq!(product[[0, 0]], 2.0); 
-    /// assert_eq!(product[[1, 1]], 2.0); 
+    /// assert_eq!(product[[0, 0]], 2.0);
+    /// assert_eq!(product[[1, 1]], 2.0);
     /// assert_eq!(product[[2, 2]], 2.0);
     /// ```
     fn mul(self, rhs: Mat3x3) -> Mat3x3 {

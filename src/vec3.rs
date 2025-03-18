@@ -2,6 +2,9 @@ use core::ops::{Add, Div, Mul, Sub};
 
 use libm::sqrtf;
 
+#[cfg(test)]
+mod tests;
+
 /// A 3D vector with generic components, suitable for mathematical operations in 3D space.
 ///
 /// `Vec3<T>` represents a 3D vector with components `x`, `y`, and `z`, where `T` is a numeric type.
