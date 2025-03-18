@@ -1,5 +1,8 @@
 use core::ops::{Add, Div, Mul, Neg, Sub};
 
+#[cfg(test)]
+mod tests;
+
 /// A 2D vector with generic components, suitable for mathematical operations in 2D space.
 ///
 /// `Vec2<T>` represents a 2D vector with components `x` and `y`, where `T` is a numeric type.

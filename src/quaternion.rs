@@ -7,6 +7,9 @@ use libm::{asinf, atan2f, cosf, sinf, sqrtf};
 
 use crate::{vec3, Mat3x3, Vec3};
 
+#[cfg(test)]
+mod tests;
+
 /// A quaternion representing a 3D rotation, stored in scalar-first notation (w, x, y, z).
 ///
 /// `Quaternion` represents a quaternion as `w + xi + yj + zk`, where `w` is the scalar part
@@ -388,7 +391,7 @@ impl Quaternion {
     ///
     /// let q = Quaternion::from_euler(0.0, to_radians(45.0), 0.0);
     /// let pitch = q.pitch();
-    /// 
+    ///
     /// assert!((pitch - to_radians(45.0)).abs() < 1e-5);
     /// ```
     pub fn pitch(&self) -> f32 {
