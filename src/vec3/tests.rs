@@ -208,3 +208,134 @@ fn test_magnitude() {
     let v = vec3(2.0, 3.0, 6.0);
     assert_float_eq(v.magnitude(), 7.0, EPSILON); // √(2² + 3² + 6²) = √(4 + 9 + 36) = √49 = 7
 }
+
+#[test]
+fn test_dot() {
+    let v1 = vec3(1.0, 2.0, 3.0);
+    let v2 = vec3(4.0, 5.0, 6.0);
+    assert_eq!(v1.dot(v2), 32.0);
+
+    let v3 = vec3(1.0, 0.0, 0.0);
+    let v4 = vec3(0.0, 1.0, 0.0);
+    assert_eq!(v3.dot(v4), 0.0);
+}
+
+#[test]
+fn test_cross() {
+    let v1 = vec3(1.0, 0.0, 0.0);
+    let v2 = vec3(0.0, 1.0, 0.0);
+    assert_eq!(v1.cross(v2), vec3(0.0, 0.0, 1.0));
+
+    let v3 = vec3(1.0, 2.0, 3.0);
+    let v4 = vec3(2.0, 4.0, 6.0);
+    assert_eq!(v3.cross(v4), vec3(0.0, 0.0, 0.0));
+}
+
+#[test]
+fn test_division_by_zero() {
+    let v: Vec3<f32> = vec3(1.0, 2.0, 3.0);
+    assert!(v.is_finite());
+
+    let result = v / 0.0;
+
+    assert!(result.x.is_infinite());
+    assert!(result.y.is_infinite());
+    assert!(result.z.is_infinite());
+}
+
+#[test]
+fn test_right_scalar_multiplication() {
+    let v = vec3(1.0, 2.0, 3.0);
+    let result = v * 2.0;
+    assert_eq!(result, vec3(2.0, 4.0, 6.0));
+}
+
+#[test]
+fn test_multiplication_edge_cases() {
+    // Negative numbers
+    let v1 = vec3(-2.0, -3.0, -4.0);
+    let v2 = vec3(5.0, 6.0, 7.0);
+    let result = v1 * v2;
+    assert_eq!(result, vec3(-10.0, -18.0, -28.0));
+
+    // Zeros
+    let v3 = vec3(0.0, 0.0, 0.0);
+    let v4 = vec3(1.0, 2.0, 3.0);
+    let result = v3 * v4;
+    assert_eq!(result, vec3(0.0, 0.0, 0.0));
+
+    // Mixed positive/negative
+    let v5 = vec3(-1.0, 2.0, -3.0);
+    let v6 = vec3(4.0, -5.0, 6.0);
+    let result = v5 * v6;
+    assert_eq!(result, vec3(-4.0, -10.0, -18.0));
+}
+
+#[test]
+fn test_scalar_multiplication_edge_cases() {
+    // Negative scalar
+    let v = vec3(1.0, 2.0, 3.0);
+    let result = -2.0 * v;
+    assert_eq!(result, vec3(-2.0, -4.0, -6.0));
+
+    // Zero scalar
+    let result = 0.0 * v;
+    assert_eq!(result, vec3(0.0, 0.0, 0.0));
+
+    // Large scalar
+    let large = f32::MAX / 4.0; // Avoid overflow
+    let result = large * vec3(1.0, 1.0, 1.0);
+    assert!(result.x.is_finite() && result.x > 0.0);
+}
+
+#[test]
+fn test_component_wise_division() {
+    let v1 = vec3(4.0, 6.0, 8.0);
+    let v2 = vec3(2.0, 3.0, 4.0);
+    let result = v1 / v2;
+    assert_eq!(result, vec3(2.0, 2.0, 2.0));
+
+    // Negative components
+    let v3 = vec3(-4.0, -6.0, -8.0);
+    let result = v3 / v2;
+    assert_eq!(result, vec3(-2.0, -2.0, -2.0));
+
+    // Mixed positive/negative
+    let v4 = vec3(-1.0, 2.0, -3.0);
+    let v5 = vec3(4.0, -5.0, 6.0);
+    let result = v4 / v5;
+    assert_float_eq(result.x, -0.25, EPSILON);
+    assert_float_eq(result.y, -0.4, EPSILON);
+    assert_float_eq(result.z, -0.5, EPSILON);
+}
+
+#[test]
+#[should_panic(expected = "attempt to divide by zero")]
+fn test_division_by_zero_integer() {
+    let v = vec3(1, 2, 3);
+    let _ = v / 0; // Should panic for integers
+}
+
+#[test]
+fn test_division_by_zero_float() {
+    let v: Vec3<f64> = vec3(1.0, 2.0, 3.0);
+    let result = v / 0.0;
+    assert!(result.x.is_infinite() && result.x > 0.0);
+    assert!(result.y.is_infinite() && result.y > 0.0);
+    assert!(result.z.is_infinite() && result.z > 0.0);
+
+    // Component-wise division by zero
+    let v2 = vec3(0.0, 1.0, 0.0);
+    let result = v / v2;
+    assert!(result.x.is_infinite() && result.x > 0.0);
+    assert_eq!(result.y, 2.0);
+    assert!(result.z.is_infinite() && result.z > 0.0);
+}
+
+#[test]
+fn test_division_by_scalar_edge_cases() {
+    // Negative scalar
+    let v = vec3(4.0, 6.0, 8.0);
+    let result = v / -2.0;
+    assert_eq!(result, vec3(-2.0, -3.0, -4.0));
+}

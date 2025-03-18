@@ -22,6 +22,15 @@ fn assert_quaternion_eq(q1: &Quaternion, q2: &Quaternion, epsilon: f32) {
 }
 
 #[test]
+fn test_new() {
+    let q = Quaternion::new(1.0, 2.0, 3.0, 4.0);
+    assert_eq!(q.w, 1.0);
+    assert_eq!(q.x, 2.0);
+    assert_eq!(q.y, 3.0);
+    assert_eq!(q.z, 4.0);
+}
+
+#[test]
 fn test_identity() {
     let q = Quaternion::identity();
     assert_quaternion_eq(&q, &Quaternion::new(1.0, 0.0, 0.0, 0.0), 1e-6);
@@ -250,4 +259,71 @@ fn test_normalize() {
 
     let q_zero = Quaternion::new(0.0, 0.0, 0.0, 0.0);
     assert_eq!(q_zero.normalize(), Quaternion::identity());
+}
+
+// #[test]
+// fn test_inverse_non_unit() {
+//     let q = Quaternion::new(1.0, 2.0, 3.0, 4.0); // Magnitude ≈ 5.477
+//     let inv = q.inverse(); // Should be conjugate / mag^2
+//     let expected = Quaternion::new(1.0 / 30.0, -2.0 / 30.0, -3.0 / 30.0, -4.0 / 30.0);
+//     assert_quaternion_eq(&inv, &expected, 1e-6);
+// }
+
+#[test]
+fn test_from_euler_gimbal_lock() {
+    let q = Quaternion::from_euler(0.0, PI / 2.0 - 0.0001, 0.0); // Near 90° pitch
+    let euler = q.to_euler();
+    assert_float_eq(euler.y, PI / 2.0 - 0.0001, 1e-3);
+}
+
+#[test]
+fn test_to_euler_singularity() {
+    let q = Quaternion::from_euler(PI / 4.0, PI / 2.0, PI / 3.0); // Pitch = 90°
+    let euler = q.to_euler();
+    assert_float_eq(euler.y, PI / 2.0, 1e-3); // Pitch should be exact
+                                              // Yaw and roll combine; exact values depend on implementation
+}
+
+#[test]
+fn test_rotation_matrix_combined() {
+    let q = Quaternion::from_euler(PI / 2.0, PI / 4.0, 0.0);
+    let mat = q.rotation_matrix_i_wrt_b();
+    let mat_t = q.rotation_matrix_b_wrt_i();
+    // Verify orthogonality and inverse relationship
+    let product = mat * mat_t;
+    for i in 0..9 {
+        assert_float_eq(product.data[i], if i % 4 == 0 { 1.0 } else { 0.0 }, 1e-6);
+    }
+}
+
+#[test]
+fn test_is_finite() {
+    let q1 = Quaternion::new(1.0, 2.0, 3.0, 4.0);
+    assert!(q1.is_finite());
+    let q2 = Quaternion::new(f32::INFINITY, 0.0, 0.0, 0.0);
+    assert!(!q2.is_finite());
+    let q3 = Quaternion::new(0.0, f32::NAN, 0.0, 0.0);
+    assert!(!q3.is_finite());
+}
+
+#[test]
+fn test_normalize_edge_cases() {
+    let q = Quaternion::new(1e-20, -1e-20, 0.0, 0.0); // Near-zero magnitude
+    let norm = q.normalize();
+    assert_quaternion_eq(&norm, &Quaternion::identity(), 1e-6);
+}
+
+#[test]
+fn test_magnitude_edge_cases() {
+    let q = Quaternion::new(f32::INFINITY, 0.0, 0.0, 0.0);
+    assert_eq!(q.magnitude(), f32::INFINITY);
+    let q = Quaternion::new(f32::NAN, 0.0, 0.0, 0.0);
+    assert!(q.magnitude().is_nan());
+}
+
+#[test]
+fn test_numerical_stability() {
+    let q = Quaternion::new(1e-10, 1e-10, 1e-10, 1e-10);
+    let norm = q.normalize();
+    assert!((norm.magnitude() - 1.0).abs() < 1e-5);
 }
